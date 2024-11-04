@@ -36,7 +36,7 @@ def gen_run_name(target_process):
 def benchmark(run_name, sh, target_process):
     with open(run_name + '.log', 'w', newline='') as file:
         writer = csv.writer(file)
-        writer.writerow(['Time', 'CPU Percent', 'MEM Usage', 'IO Reads', 'IO Writes'])
+        writer.writerow(['Time', 'CPU Percent', 'MEM Usage', 'IO Reads'])
 
         t = 0
         dt = 500
@@ -49,7 +49,7 @@ def benchmark(run_name, sh, target_process):
                 mem_bytes = target_process.memory_info().data # phy mem used by data sections
                 io_read_bytes = target_process.io_counters().read_chars # cumulative bytes read (includes non-disk-io)
                 io_write_bytes = target_process.io_counters().write_chars # cumulative bytes wrote (includes non-disk-io)
-                row = (t, cpu_percent, mem_bytes, io_read_bytes, io_write_bytes)
+                row = (t, cpu_percent, mem_bytes, io_read_bytes)
                 writer.writerow(row)
                 print(f"\rSTATS:", row, end='', flush=True)
 
@@ -72,10 +72,10 @@ def plot_run(run_names):
 
     for run, clr in zip(run_names, colors):
         data = pd.read_csv(run + '.log')
-        cpu_ax.plot(data['Time'], data['CPU Percent'], label=run, marker='o', linestyle='-', color=clr)
-        mem_ax.plot(data['Time'], data['MEM Usage'] / 1024.0 / 1024.0, label=run, marker='o', linestyle='-', color=clr)
-        io_ax.plot(data['Time'], data['IO Reads'], label='Reads (' + run + ')', color=clr, marker='o')
-        io_ax.plot(data['Time'], data['IO Writes'], label='Writes (' + run + ')', color=clr, linestyle='--', marker='x')
+        cpu_ax.plot(data['Time'], data['CPU Percent'], label=run, linestyle='-', color=clr)
+        mem_ax.plot(data['Time'], data['MEM Usage'] / 1024.0 / 1024.0, label=run, linestyle='-', color=clr)
+        io_ax.plot(data['Time'], data['IO Reads'], label='Reads (' + run + ')', color=clr)
+        # io_ax.plot(data['Time'], data['IO Writes'], label='Writes (' + run + ')', color=clr, linestyle='--', marker='x')
 
     cpu_ax.set_title('Cumulative CPU Usage')
     mem_ax.set_title('Memory Usage')
@@ -110,15 +110,15 @@ def plot_run(run_names):
     plt.show()
 
 
-def find_latest_log(dir):
+def find_latest_logs(dir, n):
     search_pattern = os.path.join(dir, f'*.log')
     files = glob.glob(search_pattern)
 
     if not files:
         return None
 
-    latest_file = max(files, key=os.path.getmtime)
-    return latest_file
+    files.sort(reverse=True, key=os.path.getmtime)
+    return files[:n]
 
 
 def main():
@@ -128,15 +128,11 @@ def main():
     p1 = subparsers.add_parser('run', help='Run the benchmark for an engine')
     p1.add_argument('cmd', type=str, help='Shell command that would execute the benchmark target')
 
-    p2 = subparsers.add_parser('plot', help='Plot stats from a previous run')
+    p2 = subparsers.add_parser('plot', help='Plot stats from previous runs')
     group = p2.add_mutually_exclusive_group(required=True)
-    group.add_argument('--logfile', type=argparse.FileType('r'), help='Path to log')
-    group.add_argument('--last', action='store_true', help='Plot the last run') 
+    group.add_argument('--logs', type=argparse.FileType('r'), help='Path to log files of runs', nargs='+')
+    group.add_argument('--last', type=int, help='Plot recent runs') 
     # TODO allow choosing of dir for last
-    
-    p3 = subparsers.add_parser('compare', help='Compare stats from past runs')
-    p3.add_argument('first', type=argparse.FileType('r'), help='Log #1')
-    p3.add_argument('second', type=argparse.FileType('r'), help='Log #2')
 
     # TODO add clean option
     
@@ -152,21 +148,16 @@ def main():
         sh.wait()
         plot_run((run_name, ))
     elif args.mode == 'plot':
-        if args.last:
-            run = find_latest_log(".")
+        if args.last is not None:
+            runs = find_latest_logs(".", args.last)
             
-            if run is None:
-                print("Error: could not find run")
+            if runs is None:
+                print("Error: could not find logs")
             else:
-                run = run[2:-4]
-                print("Run name:", run)
-                plot_run((run, ))
+                runs = [run[2:-4] for run in runs]
+                print("Run names:", runs)
+                plot_run(runs)
         else:
-            run = args.logfile.name
-            run = run[:-4]
-            plot_run((run, ))
-    elif args.mode == 'compare':
-        plot_run((args.first.name[:-4], args.second.name[:-4]))
-    
+            plot_run([file.name[:-4] for file in args.logs])
 
 main()
