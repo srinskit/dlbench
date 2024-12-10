@@ -6,7 +6,6 @@ import psutil
 import csv
 import time
 import pandas as pd
-import argparse
 import os
 import glob
 
@@ -121,43 +120,3 @@ def find_latest_logs(dir, n):
     return files[:n]
 
 
-def main():
-    parser = argparse.ArgumentParser(description='A benchmark tool for Datalog engines')
-    subparsers = parser.add_subparsers(dest='mode', required=True)
-
-    p1 = subparsers.add_parser('run', help='Run the benchmark for an engine')
-    p1.add_argument('cmd', type=str, help='Shell command that would execute the benchmark target')
-
-    p2 = subparsers.add_parser('plot', help='Plot stats from previous runs')
-    group = p2.add_mutually_exclusive_group(required=True)
-    group.add_argument('--logs', type=argparse.FileType('r'), help='Path to log files of runs', nargs='+')
-    group.add_argument('--last', type=int, help='Plot recent runs') 
-    # TODO allow choosing of dir for last
-
-    # TODO add clean option
-    
-    args = parser.parse_args()
-
-    if args.mode == 'run':
-        print_sys_metadata()
-        # "souffle -F test -D test test/reachable.dl"
-        sh, target_process = start_target(args.cmd)
-        run_name = gen_run_name(target_process)
-        print('Run name:', run_name)
-        benchmark(run_name, sh, target_process)
-        sh.wait()
-        plot_run((run_name, ))
-    elif args.mode == 'plot':
-        if args.last is not None:
-            runs = find_latest_logs(".", args.last)
-            
-            if runs is None:
-                print("Error: could not find logs")
-            else:
-                runs = [run[2:-4] for run in runs]
-                print("Run names:", runs)
-                plot_run(runs)
-        else:
-            plot_run([file.name[:-4] for file in args.logs])
-
-main()

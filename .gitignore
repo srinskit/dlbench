@@ -1,5 +1,3 @@
-*.log
-*.png
-_*
-test
-stdtest
+build
+dist
+**/__pycache__
