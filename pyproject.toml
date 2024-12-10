@@ -10,7 +10,7 @@ name = "dlbench"
 version = "2024.12.09"
 description = "Benchmark monitor for datalog engines"
 dependencies = ["matplotlib", "pandas", "psutil"]
-requires-python = ">=3.10"
+requires-python = ">=3.6"
 authors = [{ name = "srinskit", email = "srinskit@protonmail.com" }]
 readme = "README.md"
 classifiers = ["Programming Language :: Python :: 3"]
