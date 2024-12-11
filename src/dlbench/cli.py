@@ -21,13 +21,18 @@ def main():
     if args.mode == "run":
         bench.print_sys_metadata()
         sh, target_process = bench.start_target(args.cmd)
-        run_name = bench.gen_run_name(target_process)
-        print("Run name:", run_name)
-        print("Logging stats to:", run_name + ".log")
-        try:
-            bench.benchmark(run_name, sh, target_process)
-        except KeyboardInterrupt:
-            print("Exiting benchmark")
+
+        if target_process is not None:
+            run_name = bench.gen_run_name(target_process)
+            print("Run name:", run_name)
+            print("Logging stats to:", run_name + ".log")
+            try:
+                bench.benchmark(run_name, sh, target_process)
+            except KeyboardInterrupt:
+                print("Exiting benchmark")
+        else:
+            print("Error: could not find a process to monitor")
+
         sh.wait()
     elif args.mode == "plot":
         if args.last is not None:

@@ -23,8 +23,26 @@ def start_target(shell_cmd):
     # TODO: set CPU affinity for consistent bench
     
     sh = subprocess.Popen(shell_cmd, shell=True)
-    target_process = psutil.Process(sh.pid).children()[0]
-    print("Started process:", target_process.name())
+    target_process = None
+
+    retry = 5
+    while retry > 0:
+        children = psutil.Process(sh.pid).children(recursive=True)
+
+        if len(children) == 1:
+            target_process = children[0]
+            break
+        elif len(children) > 1:
+            print("Warning: benchmark target command led to multiple processes, monitoring the last one")
+            target_process = children[-1]
+            break
+
+        retry = retry - 1
+        time.sleep(2)
+
+    if target_process is not None:
+        print("Started process:", target_process.name())
+
     return sh, target_process
 
 def gen_run_name(target_process):

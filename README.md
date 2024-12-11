@@ -18,7 +18,7 @@ pip uninstall dlbench
 
 ### Benchmark a run
 
-`dlbench run` takes as input a shell command that would execute the benchmark target. It starts the benchmark target as a subprocess and monitors it's resource utilization. The resource utilization metrics are stored into a `.log` file, which can be plotted on a graph using `dlbench plot`.
+`dlbench run` takes as input a shell command that would execute the benchmark target. It starts the benchmark target as a subprocess and monitors it's resource utilization. The resource utilization metrics are stored into a `.log` file, which can be plotted on a graph using `dlbench plot`. Ideally, the supplied shell command should create a single process to be monitored.
 
 #### Examples
 
