@@ -45,43 +45,25 @@ def start_target(shell_cmd):
 
     return sh, target_process
 
-def gen_run_name(target_process):
-    local_time = time.localtime()
-    timestamp = time.strftime("%Y-%m-%dT%H:%M:%S", local_time)
-    return 'dlbench-' + target_process.name() + '-' + timestamp
-
-def benchmark(run_name, sh, target_process):
+def benchmark(run_name, sh, target_process, start_time):
     with open(run_name + '.log', 'w', newline='') as file:
         writer = csv.writer(file)
         writer.writerow(['Time', 'CPU Percent', 'MEM Usage', 'IO Reads'])
+        dt = .5
 
-        t = 0
-        dt = 500
-        cpu_time = None
-        
         while sh.poll() is None:
             with target_process.oneshot():
-                cpu_time = target_process.cpu_times()  
                 cpu_percent = target_process.cpu_percent() # cumulative across all CPU
                 mem_bytes = target_process.memory_info().data # phy mem used by data sections
                 io_read_bytes = target_process.io_counters().read_chars # cumulative bytes read (includes non-disk-io)
-                io_write_bytes = target_process.io_counters().write_chars # cumulative bytes wrote (includes non-disk-io)
+                t = round(time.time() - start_time, 2)
                 row = (t, cpu_percent, mem_bytes, io_read_bytes)
                 writer.writerow(row)
                 print(f"\rSTATS:", row, end='', flush=True)
 
-            t += dt
-            time.sleep(dt / 1000.0) 
-        
-        print()        
-        print('CPU Time:', cpu_time)
-        print('CPU Time:', sum(cpu_time[:-1]))
-        
-        
-    # TODO calculate a benchmark score
-    #   * based on CPU time
-    #   * based on IO
-    #   * based on MEM
+            time.sleep(dt) 
+
+    print()
 
 def plot_run(run_names):
     fig, [cpu_ax, mem_ax, io_ax] = plt.subplots(3, 1, figsize=(10, 10), sharex=True)
@@ -102,7 +84,7 @@ def plot_run(run_names):
     mem_ax.set_ylabel('MB')
     io_ax.set_ylabel('Bytes')
 
-    io_ax.set_xlabel('Time (ms)')
+    io_ax.set_xlabel('Time (s)')
 
     cpu_ax.legend()
     mem_ax.legend()
