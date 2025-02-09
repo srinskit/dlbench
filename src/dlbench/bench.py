@@ -49,7 +49,8 @@ def benchmark(run_name, sh, target_process, start_time):
     with open(run_name + '.log', 'w', newline='') as file:
         writer = csv.writer(file)
         writer.writerow(['Time', 'CPU Percent', 'MEM Usage', 'IO Reads'])
-        dt = .5
+        dt = .05
+        t = 0
 
         while sh.poll() is None:
             with target_process.oneshot():
@@ -61,7 +62,18 @@ def benchmark(run_name, sh, target_process, start_time):
                 writer.writerow(row)
                 print(f"\rSTATS:", row, end='', flush=True)
 
+            if dt < 1 and t > 100 * dt:
+                dt = min(2 * dt, 1)
+
+            # 00s - 05s: dt = 0.05s
+            # 05s - 10s: dt = 0.1s
+            # 10s - 20s: dt = 0.2s
+            # 20s - 40s: dt = 0.4s
+            # 40s - 80s: dt = 0.8s
+            # 80s - inf: dt = 1s
+
             time.sleep(dt) 
+            t += dt
 
     print()
 
