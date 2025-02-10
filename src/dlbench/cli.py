@@ -18,6 +18,14 @@ def main():
         "tag", type=str, nargs="?", default=None, help="Prefix to tag the run name with"
     )
 
+    p1.add_argument(
+        "--monitor",
+        "-m",
+        nargs="+",
+        type=str,
+        help="Names of systemd processes to monitor in addition to benchmark target",
+    )
+
     p2 = subparsers.add_parser("plot", help="Plot stats from previous runs")
     group = p2.add_mutually_exclusive_group(required=True)
 
@@ -50,7 +58,7 @@ def main():
             print("Logging stats to:", run_name + ".log")
 
             try:
-                bench.benchmark(run_name, sh, target_process, start_time)
+                bench.benchmark(run_name, sh, target_process, start_time, args.monitor)
             except KeyboardInterrupt:
                 print("Exiting benchmark")
         else:

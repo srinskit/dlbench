@@ -45,7 +45,7 @@ def start_target(shell_cmd):
 
     return sh, target_process
 
-def benchmark(run_name, sh, target_process, start_time):
+def benchmark(run_name, sh, target_process, start_time, misc_targets):
     with open(run_name + '.log', 'w', newline='') as file:
         writer = csv.writer(file)
         writer.writerow(['Time', 'CPU Percent', 'MEM Usage', 'IO Reads'])
@@ -53,27 +53,32 @@ def benchmark(run_name, sh, target_process, start_time):
         t = 0
 
         while sh.poll() is None:
-            with target_process.oneshot():
-                t = round(time.time() - start_time, 2)
-                cpu_percent = target_process.cpu_percent() # cumulative across all CPU
-                mem_bytes = target_process.memory_info().data # phy mem used by data sections
-                io_read_bytes = target_process.io_counters().read_chars # cumulative bytes read (includes non-disk-io)
+            t = round(time.time() - start_time, 2)
+            targets = [
+                target_process,
+                *target_process.children(recursive=True),
+            ]
 
-                # TODO: try to avoid children check everytime if there's a pattern of no children?
-                for child in target_process.children(recursive=True):
-                    try:
-                        with child.oneshot():
-                            cpu_percent += child.cpu_percent()
-                            mem_bytes += child.memory_info().data
-                            io_read_bytes += child.io_counters().read_chars
+            if misc_targets is not None and len(misc_targets) > 0:
+                systemd = psutil.Process(1)
+                for child in systemd.children(recursive=False):
+                    if child.name() in misc_targets:
+                        targets.append(child)
 
-                    except psutil.NoSuchProcess:
-                        # Ignore if process terminated
-                        pass
+            for proc in targets:
+                try:
+                    with proc.oneshot():
+                        cpu_percent = proc.cpu_percent() # cumulative across all CPU
+                        mem_bytes = proc.memory_info().data # phy mem used by data sections
+                        io_read_bytes = proc.io_counters().read_chars # cumulative bytes read (includes non-disk-io)
 
-                row = (t, cpu_percent, mem_bytes, io_read_bytes)
-                writer.writerow(row)
-                print(f"\rSTATS:", row, end='', flush=True)
+                except psutil.NoSuchProcess:
+                    # Ignore if process terminated
+                    pass
+
+            row = (t, cpu_percent, mem_bytes, io_read_bytes)
+            writer.writerow(row)
+            print(f"\rSTATS:", row, end='', flush=True)
 
             if dt < 1 and t > 100 * dt:
                 dt = min(2 * dt, 1)
