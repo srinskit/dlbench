@@ -79,7 +79,7 @@ def benchmark(run_name, sh, target_process, start_time):
 
 def plot_run(run_names):
     fig, [cpu_ax, mem_ax, io_ax] = plt.subplots(3, 1, figsize=(10, 10), sharex=True)
-    colors = ['r', 'g', 'b' , 'y']
+    colors = ['b', 'g', 'r', 'c', 'm', 'y', 'k', 'orange', 'purple', 'brown']
 
     for run, clr in zip(run_names, colors):
         data = pd.read_csv(run + '.log')
