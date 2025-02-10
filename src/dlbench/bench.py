@@ -54,10 +54,23 @@ def benchmark(run_name, sh, target_process, start_time):
 
         while sh.poll() is None:
             with target_process.oneshot():
+                t = round(time.time() - start_time, 2)
                 cpu_percent = target_process.cpu_percent() # cumulative across all CPU
                 mem_bytes = target_process.memory_info().data # phy mem used by data sections
                 io_read_bytes = target_process.io_counters().read_chars # cumulative bytes read (includes non-disk-io)
-                t = round(time.time() - start_time, 2)
+
+                # TODO: try to avoid children check everytime if there's a pattern of no children?
+                for child in target_process.children(recursive=True):
+                    try:
+                        with child.oneshot():
+                            cpu_percent += child.cpu_percent()
+                            mem_bytes += child.memory_info().data
+                            io_read_bytes += child.io_counters().read_chars
+
+                    except psutil.NoSuchProcess:
+                        # Ignore if process terminated
+                        pass
+
                 row = (t, cpu_percent, mem_bytes, io_read_bytes)
                 writer.writerow(row)
                 print(f"\rSTATS:", row, end='', flush=True)
