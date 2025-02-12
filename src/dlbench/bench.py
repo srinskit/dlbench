@@ -9,6 +9,7 @@ import pandas as pd
 import os
 import glob
 
+
 def print_sys_metadata():
     print("System CPU count:", psutil.cpu_count())
 
@@ -16,12 +17,12 @@ def print_sys_metadata():
     print("System MEM total:", int(round(mem[0] / 1024.0 / 1024.0 / 1024.0, 2)))
     print("System MEM avail:", int(round(mem[1] / 1024.0 / 1024.0 / 1024.0, 2)))
     print("System MEM usage:", mem[2])
-    
-    
+
+
 def start_target(shell_cmd):
     # TODO: set process priority for better bench
     # TODO: set CPU affinity for consistent bench
-    
+
     sh = subprocess.Popen(shell_cmd, shell=True)
     target_process = None
 
@@ -33,7 +34,9 @@ def start_target(shell_cmd):
             target_process = children[0]
             break
         elif len(children) > 1:
-            print("Warning: benchmark target command led to multiple processes, monitoring the last one")
+            print(
+                "Warning: benchmark target command led to multiple processes, monitoring the last one"
+            )
             target_process = children[-1]
             break
 
@@ -45,40 +48,59 @@ def start_target(shell_cmd):
 
     return sh, target_process
 
+
 def benchmark(run_name, sh, target_process, start_time, misc_targets):
-    with open(run_name + '.log', 'w', newline='') as file:
+    with open(run_name + ".log", "w", newline="") as file:
         writer = csv.writer(file)
-        writer.writerow(['Time', 'CPU Percent', 'MEM Usage', 'IO Reads'])
-        dt = .05
+        writer.writerow(["Time", "CPU Percent", "MEM Usage", "IO Reads", "_NProc"])
+        dt = 0.05
         t = 0
+
+        targets = [target_process]
+        pid_map = {target_process.pid: True}
 
         while sh.poll() is None:
             t = round(time.time() - start_time, 2)
-            targets = [
-                target_process,
-                *target_process.children(recursive=True),
-            ]
+
+            for proc in target_process.children(recursive=True):
+                if proc.pid not in pid_map:
+                    targets.append(proc)
+                    pid_map[proc.pid] = True
 
             if misc_targets is not None and len(misc_targets) > 0:
                 systemd = psutil.Process(1)
-                for child in systemd.children(recursive=False):
-                    if child.name() in misc_targets:
-                        targets.append(child)
+                for proc in systemd.children(recursive=False):
+                    if proc.name() in misc_targets and proc.pid not in pid_map:
+                        targets.append(proc)
+                        pid_map[proc.pid] = True
+
+                    # TODO: add children of background process too
+
+            cpu_percent = 0
+            mem_bytes = 0
+            io_read_bytes = 0
 
             for proc in targets:
                 try:
                     with proc.oneshot():
-                        cpu_percent = proc.cpu_percent() # cumulative across all CPU
-                        mem_bytes = proc.memory_info().data # phy mem used by data sections
-                        io_read_bytes = proc.io_counters().read_chars # cumulative bytes read (includes non-disk-io)
+                        cpu_percent += proc.cpu_percent()  # cumulative across all CPU
+                        mem_bytes += (
+                            proc.memory_info().data
+                        )  # phy mem used by data sections
+                        io_read_bytes += (
+                            proc.io_counters().read_chars
+                        )  # cumulative bytes read (includes non-disk-io)
 
                 except psutil.NoSuchProcess:
-                    # Ignore if process terminated
-                    pass
+                    if proc.pid == target_process.pid:
+                        print("[dlbench] target missing")
+                    else:
+                        targets = list(filter(lambda p: p.pid != proc.pid, targets))
+                        pid_map[proc.pid] = False
 
-            row = (t, cpu_percent, mem_bytes, io_read_bytes)
+            row = (t, cpu_percent, mem_bytes, io_read_bytes, len(targets))
             writer.writerow(row)
-            print(f"\rSTATS:", row, end='', flush=True)
+            print(f"\rSTATS:", row, end="", flush=True)
 
             if dt < 1 and t > 100 * dt:
                 dt = min(2 * dt, 1)
@@ -90,31 +112,42 @@ def benchmark(run_name, sh, target_process, start_time, misc_targets):
             # 40s - 80s: dt = 0.8s
             # 80s - inf: dt = 1s
 
-            time.sleep(dt) 
+            time.sleep(dt)
             t += dt
 
     print()
 
+
 def plot_run(run_names):
     fig, [cpu_ax, mem_ax, io_ax] = plt.subplots(3, 1, figsize=(10, 10), sharex=True)
-    colors = ['b', 'g', 'r', 'c', 'm', 'y', 'k', 'orange', 'purple', 'brown']
+    colors = ["b", "g", "r", "c", "m", "y", "k", "orange", "purple", "brown"]
 
     for run, clr in zip(run_names, colors):
-        data = pd.read_csv(run + '.log')
-        cpu_ax.plot(data['Time'], data['CPU Percent'], label=run, linestyle='-', color=clr)
-        mem_ax.plot(data['Time'], data['MEM Usage'] / 1024.0 / 1024.0, label=run, linestyle='-', color=clr)
-        io_ax.plot(data['Time'], data['IO Reads'], label='Reads (' + run + ')', color=clr)
+        data = pd.read_csv(run + ".log")
+        cpu_ax.plot(
+            data["Time"], data["CPU Percent"], label=run, linestyle="-", color=clr
+        )
+        mem_ax.plot(
+            data["Time"],
+            data["MEM Usage"] / 1024.0 / 1024.0,
+            label=run,
+            linestyle="-",
+            color=clr,
+        )
+        io_ax.plot(
+            data["Time"], data["IO Reads"], label="Reads (" + run + ")", color=clr
+        )
         # io_ax.plot(data['Time'], data['IO Writes'], label='Writes (' + run + ')', color=clr, linestyle='--', marker='x')
 
-    cpu_ax.set_title('Cumulative CPU Usage')
-    mem_ax.set_title('Memory Usage')
-    io_ax.set_title('IO')
-    
-    cpu_ax.set_ylabel('Percent')
-    mem_ax.set_ylabel('MB')
-    io_ax.set_ylabel('Bytes')
+    cpu_ax.set_title("Cumulative CPU Usage")
+    mem_ax.set_title("Memory Usage")
+    io_ax.set_title("IO")
 
-    io_ax.set_xlabel('Time (s)')
+    cpu_ax.set_ylabel("Percent")
+    mem_ax.set_ylabel("MB")
+    io_ax.set_ylabel("Bytes")
+
+    io_ax.set_xlabel("Time (s)")
 
     cpu_ax.legend()
     mem_ax.legend()
@@ -123,14 +156,14 @@ def plot_run(run_names):
     cpu_ax.grid()
     mem_ax.grid()
     io_ax.grid()
-    
+
     plot_name = run_names[0]
-    
+
     if len(run_names) > 1:
-        plot_name = run_names[0] + '-cmp'
-   
-    fig.canvas.manager.set_window_title('DlBench ' + plot_name)
-    
+        plot_name = run_names[0] + "-cmp"
+
+    fig.canvas.manager.set_window_title("DlBench " + plot_name)
+
     manager = plt.get_current_fig_manager()
     manager.full_screen_toggle()
 
@@ -140,7 +173,7 @@ def plot_run(run_names):
 
 
 def find_latest_logs(dir, n):
-    search_pattern = os.path.join(dir, f'*.log')
+    search_pattern = os.path.join(dir, f"*.log")
     files = glob.glob(search_pattern)
 
     if not files:
@@ -148,5 +181,3 @@ def find_latest_logs(dir, n):
 
     files.sort(reverse=True, key=os.path.getmtime)
     return files[:n]
-
-
