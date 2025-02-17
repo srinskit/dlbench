@@ -181,7 +181,6 @@ def plot_run(run_names, args):
                     leg_line.set_alpha(1.0 if visible else 0.2)
                     leg_text.set_alpha(1.0 if visible else 0.3)
                     fig.canvas.draw()
-                    plt.tight_layout()
                     plt.draw()
                     return
 
