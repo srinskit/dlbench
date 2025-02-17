@@ -118,40 +118,80 @@ def benchmark(run_name, sh, target_process, start_time, misc_targets):
     print()
 
 
-def plot_run(run_names):
+def plot_run(run_names, args):
     fig, [cpu_ax, mem_ax, io_ax] = plt.subplots(3, 1, figsize=(10, 10), sharex=True)
     colors = ["b", "g", "r", "c", "m", "y", "k", "orange", "purple", "brown"]
+    graph_lines = [[] for _ in range(3)]
 
     for run, clr in zip(run_names, colors):
         data = pd.read_csv(run + ".log")
-        cpu_ax.plot(
+
+        # Cleanup data
+        # if args.pretty:
+        #     Q1 = data["CPU Percent"].quantile(0.25)
+        #     Q3 = data["CPU Percent"].quantile(0.75)
+        #     IQR = Q3 - Q1
+        #     upper_bound = Q3 + 2 * IQR
+        #     print(run, upper_bound)
+        #     data = data[data["CPU Percent"] < upper_bound]
+
+        (line,) = cpu_ax.plot(
             data["Time"], data["CPU Percent"], label=run, linestyle="-", color=clr
         )
-        mem_ax.plot(
+        graph_lines[0].append(line)
+        (line,) = mem_ax.plot(
             data["Time"],
-            data["MEM Usage"] / 1024.0 / 1024.0,
+            data["MEM Usage"] / 1000.0 / 1000.0,
             label=run,
             linestyle="-",
             color=clr,
         )
-        io_ax.plot(
-            data["Time"], data["IO Reads"], label="Reads (" + run + ")", color=clr
+        graph_lines[1].append(line)
+        (line,) = io_ax.plot(
+            data["Time"], data["IO Reads"] / 1000.0, label=run, color=clr
         )
+        graph_lines[2].append(line)
         # io_ax.plot(data['Time'], data['IO Writes'], label='Writes (' + run + ')', color=clr, linestyle='--', marker='x')
 
     cpu_ax.set_title("Cumulative CPU Usage")
     mem_ax.set_title("Memory Usage")
-    io_ax.set_title("IO")
+    io_ax.set_title("Disk Reads")
 
     cpu_ax.set_ylabel("Percent")
     mem_ax.set_ylabel("MB")
-    io_ax.set_ylabel("Bytes")
+    io_ax.set_ylabel("KB")
 
     io_ax.set_xlabel("Time (s)")
 
-    cpu_ax.legend()
-    mem_ax.legend()
-    io_ax.legend()
+    legends = [
+        cpu_ax.legend(),
+        mem_ax.legend(),
+        io_ax.legend(),
+    ]
+
+    # Define function for toggling visibility
+    def on_legend_click(event):
+        for legend, lines in zip(legends, graph_lines):
+            for leg_line, leg_text, line in zip(
+                legend.get_lines(), legend.get_texts(), lines
+            ):
+                if event.artist == leg_text:
+                    visible = not line.get_visible()
+                    line.set_visible(visible)
+                    leg_line.set_alpha(1.0 if visible else 0.2)
+                    leg_text.set_alpha(1.0 if visible else 0.3)
+                    fig.canvas.draw()
+                    plt.tight_layout()
+                    plt.draw()
+                    return
+
+    # Connect event
+    fig.canvas.mpl_connect("pick_event", on_legend_click)
+
+    # Make legend elements clickable
+    for leg in legends:
+        for leg_text in leg.get_texts():
+            leg_text.set_picker(True)
 
     cpu_ax.grid()
     mem_ax.grid()
@@ -168,7 +208,7 @@ def plot_run(run_names):
     manager.full_screen_toggle()
 
     plt.tight_layout()
-    plt.savefig(plot_name, dpi=300)
+    # plt.savefig(plot_name, dpi=300)
     plt.show()
 
 

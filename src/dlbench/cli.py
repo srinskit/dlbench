@@ -27,6 +27,7 @@ def main():
     )
 
     p2 = subparsers.add_parser("plot", help="Plot stats from previous runs")
+    p2.add_argument("--pretty", "-p", action="store_true", help="Denoise and plot")
     group = p2.add_mutually_exclusive_group(required=True)
 
     group.add_argument(
@@ -37,6 +38,7 @@ def main():
     )
 
     group.add_argument("--last", type=int, help="Plot recent runs")
+
     # TODO allow choosing of dir for last
 
     # TODO add clean option
@@ -75,9 +77,9 @@ def main():
             else:
                 runs = [run[2:-4] for run in runs]
                 print("Run names:", runs)
-                bench.plot_run(runs)
+                bench.plot_run(runs, args)
         else:
-            bench.plot_run([file.name[:-4] for file in args.logs])
+            bench.plot_run([file.name[:-4] for file in args.logs], args)
 
 
 if __name__ == "__main__":
