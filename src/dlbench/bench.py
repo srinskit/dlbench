@@ -196,12 +196,12 @@ def plot_run(run_names, args):
     mem_ax.grid()
     io_ax.grid()
 
-    plot_name = run_names[0]
+    # plot_name = run_names[0]
 
-    if len(run_names) > 1:
-        plot_name = run_names[0] + "-cmp"
+    # if len(run_names) > 1:
+    #     plot_name = run_names[0] + "-cmp"
 
-    fig.canvas.manager.set_window_title("DlBench " + plot_name)
+    fig.canvas.manager.set_window_title("DlBench")
 
     manager = plt.get_current_fig_manager()
     manager.full_screen_toggle()
