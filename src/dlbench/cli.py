@@ -55,7 +55,6 @@ def main():
             local_time = time.localtime()
             timestamp = time.strftime("%Y-%m-%dT%H:%M:%S", local_time)
             run_name = tag + "_" + timestamp
-            run_name = run_name.replace(".", "-")
             print("Run name:", run_name)
             print("Logging stats to:", run_name + ".log")
 
