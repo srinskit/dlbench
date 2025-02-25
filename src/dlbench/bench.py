@@ -19,11 +19,11 @@ def print_sys_metadata():
     print("System MEM usage:", mem[2])
 
 
-def start_target(shell_cmd):
+def start_target(shell_cmd, f):
     # TODO: set process priority for better bench
     # TODO: set CPU affinity for consistent bench
 
-    sh = subprocess.Popen(shell_cmd, shell=True)
+    sh = subprocess.Popen(shell_cmd, shell=True, stdout=f)
     target_process = None
 
     retry = 5
@@ -50,6 +50,7 @@ def start_target(shell_cmd):
 
 
 def benchmark(run_name, sh, target_process, start_time, misc_targets):
+    print("Logging stats to:", run_name + ".log")
     with open(run_name + ".log", "w", newline="") as file:
         writer = csv.writer(file)
         writer.writerow(["Time", "CPU Percent", "MEM Usage", "IO Reads", "_NProc"])

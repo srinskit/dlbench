@@ -47,17 +47,16 @@ def main():
 
     if args.mode == "run":
         # bench.print_sys_metadata()
+        tag = args.tag if args.tag is not None else "TODO"
+        local_time = time.localtime()
+        timestamp = time.strftime("%Y-%m-%dT%H:%M:%S", local_time)
+        run_name = tag + "_" + timestamp
+        print("Run name:", run_name)
+        f = open(run_name + ".out", 'w')
         start_time = time.time()
-        sh, target_process = bench.start_target(args.cmd)
+        sh, target_process = bench.start_target(args.cmd, f)
 
         if target_process is not None:
-            tag = args.tag if args.tag is not None else target_process.name()
-            local_time = time.localtime()
-            timestamp = time.strftime("%Y-%m-%dT%H:%M:%S", local_time)
-            run_name = tag + "_" + timestamp
-            print("Run name:", run_name)
-            print("Logging stats to:", run_name + ".log")
-
             try:
                 bench.benchmark(run_name, sh, target_process, start_time, args.monitor)
             except KeyboardInterrupt:
@@ -70,6 +69,7 @@ def main():
             print("Error: could not find a process to monitor")
 
         sh.wait()
+        f.close()
 
     elif args.mode == "plot":
         if args.last is not None:
