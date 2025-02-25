@@ -65,8 +65,11 @@ def main():
         else:
             print("Error: could not find a process to monitor")
 
-        # TODO: terminate or kill any children?
+        for child in sh.children(recursive=True):
+            child.kill()
+
         sh.wait()
+
     elif args.mode == "plot":
         if args.last is not None:
             runs = bench.find_latest_logs(".", args.last)
