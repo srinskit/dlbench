@@ -220,3 +220,12 @@ def find_latest_logs(dir, n):
 
     files.sort(reverse=True, key=os.path.getmtime)
     return files[:n]
+
+
+def cleanup():
+    for child in psutil.Process().children(recursive=True):
+        try:
+            if child.is_running():
+                child.kill()
+        except Exception as e:
+            print(f"[bench.cleanup] An error occurred: {e}")

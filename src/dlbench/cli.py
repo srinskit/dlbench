@@ -65,8 +65,7 @@ def main():
             except Exception as e:
                 print(f"An error occurred: {e}")
             finally:
-                for child in sh.children(recursive=True):
-                    child.kill()
+                bench.cleanup()
         else:
             print("Error: could not find a process to monitor")
 
