@@ -46,7 +46,7 @@ def main():
     args = parser.parse_args()
 
     if args.mode == "run":
-        bench.print_sys_metadata()
+        # bench.print_sys_metadata()
         start_time = time.time()
         sh, target_process = bench.start_target(args.cmd)
 
@@ -62,11 +62,13 @@ def main():
                 bench.benchmark(run_name, sh, target_process, start_time, args.monitor)
             except KeyboardInterrupt:
                 print("Exiting benchmark")
+            except Exception as e:
+                print(f"An error occurred: {e}")
+            finally:
+                for child in sh.children(recursive=True):
+                    child.kill()
         else:
             print("Error: could not find a process to monitor")
-
-        for child in sh.children(recursive=True):
-            child.kill()
 
         sh.wait()
 
