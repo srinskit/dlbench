@@ -17,7 +17,7 @@ def main():
     p1.add_argument("tag", type=str, help="Name to tag the results with")
 
     p1.add_argument(
-        "suffix-time", action="store_true", help="Suffix the tag with a timestamp"
+        "--suffix-time", action="store_true", help="Suffix the tag with a timestamp"
     )
 
     p1.add_argument(
