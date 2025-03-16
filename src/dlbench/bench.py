@@ -120,7 +120,8 @@ def benchmark(run_name, sh, target_process, start_time, misc_targets):
 
 
 def plot_run(run_names, args):
-    fig, [cpu_ax, mem_ax, io_ax] = plt.subplots(3, 1, figsize=(10, 10), sharex=True)
+    # fig, [cpu_ax, mem_ax, io_ax] = plt.subplots(3, 1, figsize=(10, 10), sharex=True)
+    fig, [cpu_ax, mem_ax] = plt.subplots(2, 1, figsize=(10, 10), sharex=True)
     colors = ["b", "g", "r", "c", "m", "y", "k", "orange", "purple", "brown"]
     graph_lines = [[] for _ in range(3)]
 
@@ -148,26 +149,26 @@ def plot_run(run_names, args):
             color=clr,
         )
         graph_lines[1].append(line)
-        (line,) = io_ax.plot(
-            data["Time"], data["IO Reads"] / 1000.0, label=run, color=clr
-        )
-        graph_lines[2].append(line)
+        # (line,) = io_ax.plot(
+        #     data["Time"], data["IO Reads"] / 1000.0, label=run, color=clr
+        # )
+        # graph_lines[2].append(line)
         # io_ax.plot(data['Time'], data['IO Writes'], label='Writes (' + run + ')', color=clr, linestyle='--', marker='x')
 
     cpu_ax.set_title("Cumulative CPU Usage")
     mem_ax.set_title("Memory Usage")
-    io_ax.set_title("Disk Reads")
+    # io_ax.set_title("Disk Reads")
 
     cpu_ax.set_ylabel("Percent")
     mem_ax.set_ylabel("MB")
-    io_ax.set_ylabel("KB")
+    # io_ax.set_ylabel("KB")
 
-    io_ax.set_xlabel("Time (s)")
+    mem_ax.set_xlabel("Time (s)")
 
     legends = [
         cpu_ax.legend(),
         mem_ax.legend(),
-        io_ax.legend(),
+        # io_ax.legend(),
     ]
 
     # Define function for toggling visibility
@@ -195,7 +196,7 @@ def plot_run(run_names, args):
 
     cpu_ax.grid()
     mem_ax.grid()
-    io_ax.grid()
+    # io_ax.grid()
 
     # plot_name = run_names[0]
 
