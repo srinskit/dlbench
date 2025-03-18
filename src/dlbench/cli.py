@@ -74,6 +74,7 @@ def main():
 
         sh.wait()
         f.close()
+        exit(sh.returncode)
 
     elif args.mode == "plot":
         if args.last is not None:
