@@ -119,11 +119,15 @@ def benchmark(run_name, sh, target_process, start_time, misc_targets):
     print()
 
 
-def plot_run(run_names, args):
-    # fig, [cpu_ax, mem_ax, io_ax] = plt.subplots(3, 1, figsize=(10, 10), sharex=True)
-    fig, [cpu_ax, mem_ax] = plt.subplots(2, 1, figsize=(10, 10), sharex=True)
+def plot_run(run_names, graphs):
+    graph_cnt = len(graphs)
+    fig, graph_ax = plt.subplots(graph_cnt, 1, figsize=(10, 10), sharex=True)
+    
+    if graph_cnt == 1:
+        graph_ax = [graph_ax]
+    
     colors = ["b", "g", "r", "c", "m", "y", "k", "orange", "purple", "brown"]
-    graph_lines = [[] for _ in range(3)]
+    graph_lines = [[] for _ in range(graph_cnt)]
 
     for run, clr in zip(run_names, colors):
         data = pd.read_csv(run + ".log")
@@ -136,40 +140,46 @@ def plot_run(run_names, args):
         #     upper_bound = Q3 + 2 * IQR
         #     print(run, upper_bound)
         #     data = data[data["CPU Percent"] < upper_bound]
+        i = 0
 
-        (line,) = cpu_ax.plot(
-            data["Time"], data["CPU Percent"], label=run, linestyle="-", color=clr
-        )
-        graph_lines[0].append(line)
-        (line,) = mem_ax.plot(
-            data["Time"],
-            data["MEM Usage"] / 1000.0 / 1000.0,
-            label=run,
-            linestyle="-",
-            color=clr,
-        )
-        graph_lines[1].append(line)
-        # (line,) = io_ax.plot(
-        #     data["Time"], data["IO Reads"] / 1000.0, label=run, color=clr
-        # )
-        # graph_lines[2].append(line)
-        # io_ax.plot(data['Time'], data['IO Writes'], label='Writes (' + run + ')', color=clr, linestyle='--', marker='x')
+        for g, ax in zip(graphs, graph_ax):
+            if g == "c":
+                (line,) = ax.plot(
+                    data["Time"],
+                    data["CPU Percent"],
+                    label=run,
+                    linestyle="-",
+                    color=clr,
+                )
+            elif g == "m":
+                (line,) = ax.plot(
+                    data["Time"],
+                    data["MEM Usage"] / 1000.0 / 1000.0,
+                    label=run,
+                    linestyle="-",
+                    color=clr,
+                )
+            elif g == "r":
+                (line,) = ax.plot(
+                    data["Time"], data["IO Reads"] / 1000.0, label=run, color=clr
+                )
 
-    cpu_ax.set_title("Cumulative CPU Usage")
-    mem_ax.set_title("Memory Usage")
-    # io_ax.set_title("Disk Reads")
+            graph_lines[i].append(line)
+            i += 1
 
-    cpu_ax.set_ylabel("Percent")
-    mem_ax.set_ylabel("MB")
-    # io_ax.set_ylabel("KB")
+    for g, ax in zip(graphs, graph_ax):
+        if g == "c":
+            ax.set_title("Cumulative CPU Usage")
+            ax.set_ylabel("Percent")
+        elif g == "m":
+            ax.set_title("Memory Usage")
+            ax.set_ylabel("MB")
+        elif g == "r":
+            ax.set_title("Disk Reads")
+            ax.set_ylabel("KB")
 
-    mem_ax.set_xlabel("Time (s)")
-
-    legends = [
-        cpu_ax.legend(),
-        mem_ax.legend(),
-        # io_ax.legend(),
-    ]
+    graph_ax[-1].set_xlabel("Time (s)")
+    legends = [ax.legend() for ax in graph_ax]
 
     # Define function for toggling visibility
     def on_legend_click(event):
@@ -194,9 +204,8 @@ def plot_run(run_names, args):
         for leg_text in leg.get_texts():
             leg_text.set_picker(True)
 
-    cpu_ax.grid()
-    mem_ax.grid()
-    # io_ax.grid()
+    for ax in graph_ax:
+        ax.grid()
 
     # plot_name = run_names[0]
 

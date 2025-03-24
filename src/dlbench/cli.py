@@ -30,6 +30,13 @@ def main():
 
     p2 = subparsers.add_parser("plot", help="Plot stats from previous runs")
     p2.add_argument("--pretty", "-p", action="store_true", help="Denoise and plot")
+    p2.add_argument(
+        "--graphs",
+        "-g",
+        type=str,
+        default="cm",
+        help="Graphs to plot (c: CPU, m: memory, r: disk reads)",
+    )
     group = p2.add_mutually_exclusive_group(required=True)
 
     group.add_argument(
@@ -77,6 +84,13 @@ def main():
         exit(sh.returncode)
 
     elif args.mode == "plot":
+
+        # Validate graphs to plot
+        for ch in args.graphs:
+            if ch not in ('c', 'm', 'r'):
+                print(f"Error: invalid graph type '{ch}' in '{args.graphs}'.")
+                exit(1)
+
         if args.last is not None:
             runs = bench.find_latest_logs(".", args.last)
 
@@ -85,9 +99,9 @@ def main():
             else:
                 runs = [run[2:-4] for run in runs]
                 print("Run names:", runs)
-                bench.plot_run(runs, args)
+                bench.plot_run(runs, args.graphs)
         else:
-            bench.plot_run([file.name[:-4] for file in args.logs], args)
+            bench.plot_run([file.name[:-4] for file in args.logs], args.graphs)
 
 
 if __name__ == "__main__":
