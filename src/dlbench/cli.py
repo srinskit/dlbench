@@ -24,21 +24,21 @@ def main():
 
     mode_run_args.add_argument(
         "--monitor",
-        "-m",
+        metavar="process",
         nargs="+",
         type=str,
-        help="Names of systemd processes to monitor in addition to the primary benchmark target",
+        help="Names of additional systemd processes to monitor",
     )
 
     mode_plot_args = subparsers.add_parser("plot", help="Plot logs from past runs")
 
     mode_plot_args.add_argument(
-        "--pretty", "-p", action="store_true", help="Process logs for a neater plot"
+        "--pretty", action="store_true", help="Process logs for a neater plot"
     )
 
     mode_plot_args.add_argument(
         "--metrics",
-        "-m",
+        metavar="acronym",
         type=str,
         default="cm",
         help="Metrics to plot (c: CPU, m: memory, r: disk reads)",
@@ -48,12 +48,13 @@ def main():
 
     group.add_argument(
         "--logs",
+        metavar="file",
         type=argparse.FileType("r"),
         help="Path to log files of runs",
         nargs="+",
     )
 
-    group.add_argument("--last", type=int, help="Plot recent runs")
+    group.add_argument("--last", metavar="count", type=int, help="Plot recent runs")
 
     args = parser.parse_args()
 

@@ -31,7 +31,7 @@ Specifying the option `--suffix-time` will append a timestamp to the tag to make
 ```sh
 dlbench run --help
 
-usage: dlbench run [-h] [--suffix-time] [--monitor MONITOR [MONITOR ...]] cmd tag
+usage: dlbench run [-h] [--suffix-time] [--monitor process [process ...]] cmd tag
 
 positional arguments:
   cmd                   Shell command that would execute the benchmark target
@@ -40,8 +40,8 @@ positional arguments:
 options:
   -h, --help            show this help message and exit
   --suffix-time         Suffix the tag with a timestamp
-  --monitor MONITOR [MONITOR ...], -m MONITOR [MONITOR ...]
-                        Names of systemd processes to monitor in addition to benchmark target
+  --monitor process [process ...]
+                        Names of additional systemd processes to monitor
 ```
 
 `dlbench plot` is used to plot resource utilization data from one or more `<tag>.log` files. If multiple log files are specified, their resource utilization is plotted on the same chart for comparison. 
@@ -53,16 +53,15 @@ The `--metrics` argument can be used to specify what charts are plotted. For exa
 ```sh
 dlbench plot --help
 
-usage: dlbench plot [-h] [--pretty] [--graphs GRAPHS] (--logs LOGS [LOGS ...] | --last LAST)
+usage: dlbench plot [-h] [--pretty] [--metrics acronym] (--logs file [file ...] | --last count)
 
 options:
   -h, --help            show this help message and exit
-  --pretty, -p          Denoise and plot
-  --graphs GRAPHS, -g GRAPHS
-                        Graphs to plot (c: CPU, m: memory, r: disk reads)
-  --logs LOGS [LOGS ...]
+  --pretty              Process logs for a neater plot
+  --metrics acronym     Metrics to plot (c: CPU, m: memory, r: disk reads)
+  --logs file [file ...]
                         Path to log files of runs
-  --last LAST           Plot recent runs
+  --last count          Plot recent runs
 ```
 
 ### Examples
