@@ -119,8 +119,8 @@ def benchmark(run_name, sh, target_process, start_time, misc_targets):
     print()
 
 
-def plot_run(run_names, graphs):
-    graph_cnt = len(graphs)
+def plot_run(run_names, metrics):
+    graph_cnt = len(metrics)
     fig, graph_ax = plt.subplots(graph_cnt, 1, figsize=(10, 10), sharex=True)
     
     if graph_cnt == 1:
@@ -142,7 +142,7 @@ def plot_run(run_names, graphs):
         #     data = data[data["CPU Percent"] < upper_bound]
         i = 0
 
-        for g, ax in zip(graphs, graph_ax):
+        for g, ax in zip(metrics, graph_ax):
             if g == "c":
                 (line,) = ax.plot(
                     data["Time"],
@@ -167,7 +167,7 @@ def plot_run(run_names, graphs):
             graph_lines[i].append(line)
             i += 1
 
-    for g, ax in zip(graphs, graph_ax):
+    for g, ax in zip(metrics, graph_ax):
         if g == "c":
             ax.set_title("Cumulative CPU Usage")
             ax.set_ylabel("Percent")

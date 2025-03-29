@@ -90,10 +90,10 @@ def main():
 
     elif args.mode == "plot":
 
-        # Validate graphs to plot
-        for ch in args.graphs:
+        # Validate metrics to plot
+        for ch in args.metrics:
             if ch not in ("c", "m", "r"):
-                print(f"Error: invalid graph type '{ch}' in '{args.graphs}'.")
+                print(f"Error: invalid graph type '{ch}' in '{args.metrics}'.")
                 exit(1)
 
         if args.last is not None:
@@ -104,9 +104,9 @@ def main():
             else:
                 runs = [run[2:-4] for run in runs]
                 print("Run names:", runs)
-                bench.plot_run(runs, args.graphs)
+                bench.plot_run(runs, args.metrics)
         else:
-            bench.plot_run([file.name[:-4] for file in args.logs], args.graphs)
+            bench.plot_run([file.name[:-4] for file in args.logs], args.metrics)
 
 
 if __name__ == "__main__":
