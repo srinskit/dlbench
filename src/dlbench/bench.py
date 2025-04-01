@@ -119,7 +119,7 @@ def benchmark(run_name, sh, target_process, start_time, misc_targets):
     print()
 
 
-def plot_run(run_names, metrics):
+def plot_run(run_names, metrics, interval):
     graph_cnt = len(metrics)
     fig, graph_ax = plt.subplots(graph_cnt, 1, figsize=(10, 10), sharex=True)
     
@@ -133,13 +133,11 @@ def plot_run(run_names, metrics):
         data = pd.read_csv(run + ".log")
 
         # Cleanup data
-        # if args.pretty:
-        #     Q1 = data["CPU Percent"].quantile(0.25)
-        #     Q3 = data["CPU Percent"].quantile(0.75)
-        #     IQR = Q3 - Q1
-        #     upper_bound = Q3 + 2 * IQR
-        #     print(run, upper_bound)
-        #     data = data[data["CPU Percent"] < upper_bound]
+        if interval is not None and interval > 0:
+            data['Time'] = (data['Time'] // interval) * interval
+            df_resampled = data.groupby('Time', as_index=False).max()
+            data = df_resampled
+
         i = 0
 
         for g, ax in zip(metrics, graph_ax):

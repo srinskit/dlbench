@@ -32,9 +32,7 @@ def main():
 
     mode_plot_args = subparsers.add_parser("plot", help="Plot logs from past runs")
 
-    mode_plot_args.add_argument(
-        "--pretty", action="store_true", help="Process logs for a neater plot"
-    )
+    mode_plot_args.add_argument("--interval", type=float, help="The resolution of the time axis in seconds")
 
     mode_plot_args.add_argument(
         "--metrics",
@@ -104,9 +102,9 @@ def main():
             else:
                 runs = [run[2:-4] for run in runs]
                 print("Run names:", runs)
-                bench.plot_run(runs, args.metrics)
+                bench.plot_run(runs, args.metrics, args.interval)
         else:
-            bench.plot_run([file.name[:-4] for file in args.logs], args.metrics)
+            bench.plot_run([file.name[:-4] for file in args.logs], args.metrics, args.interval)
 
 
 if __name__ == "__main__":
