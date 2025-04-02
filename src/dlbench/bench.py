@@ -135,7 +135,7 @@ def plot_run(run_names, metrics, interval):
         # Cleanup data
         if interval is not None and interval > 0:
             data['Time'] = (data['Time'] // interval) * interval
-            df_resampled = data.groupby('Time', as_index=False).max()
+            df_resampled = data.groupby('Time', as_index=False).median()
             data = df_resampled
 
         i = 0
