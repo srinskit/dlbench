@@ -8,6 +8,7 @@ import time
 import pandas as pd
 import os
 import glob
+import re
 
 
 def print_sys_metadata():
@@ -119,24 +120,112 @@ def benchmark(run_name, sh, target_process, start_time, misc_targets):
     print()
 
 
-def plot_run(run_names, metrics, interval):
-    graph_cnt = len(metrics)
-    fig, graph_ax = plt.subplots(graph_cnt, 1, figsize=(10, 10), sharex=True)
-    
-    if graph_cnt == 1:
-        graph_ax = [graph_ax]
-    
-    colors = ["b", "g", "r", "c", "m", "y", "k", "orange", "purple", "brown"]
-    graph_lines = [[] for _ in range(graph_cnt)]
+def pretty_parse(log_files):
+    seq = [
+        ("Flowlog", "purple", "flowlog", "f"),
+        ("Flowlog", "purple", "eclair", "f"),
+        ("Souffle (compiled)", "darkblue", "souffle-cmpl", "s"),
+        ("Souffle (interpreted)", "lightblue", "souffle-intptr", "i"),
+        ("RecStep", "orange", "recstep", "r"),
+        ("DDlog", "darkred", "ddlog", "d"),
+    ]
 
-    for run, clr in zip(run_names, colors):
-        data = pd.read_csv(run + ".log")
+    workers_set = set()
+    dataset_set = set()
+    program_set = set()
+
+    engine = None
+    workers = None
+    dataset = None
+    program = None
+
+    log_map = {}
+
+    for file in log_files:
+        features = re.split(r"[/_.]", file.name)
+        engine = features[-2]
+        workers = features[-3]
+        dataset = features[-4]
+        program = features[-5]
+
+        workers_set.add(workers)
+        dataset_set.add(dataset)
+        program_set.add(program)
+
+        error_found = True
+        if engine in log_map:
+            print("Error: ensure only one log file per engine is supplied")
+        elif len(workers_set) != 1:
+            print("Error: ensure only one set of workers are compared")
+        elif len(dataset_set) != 1:
+            print("Error: ensure only one dataset is compared")
+        elif len(program_set) != 1:
+            print("Error: ensure only one program is compared")
+        else:
+            log_map[engine] = file
+            error_found = False
+
+        if error_found:
+            print("Files:\n" + "\n".join([file.name for file in log_files]))
+            exit(1)
+
+    result = []
+
+    for label, color, engine, engine_key in seq:
+        if engine in log_map:
+            result.append((label, color, log_map[engine], engine_key))
+
+    return result, program, dataset, int(workers)
+
+
+def plot_run(log_files, args):
+    metrics, interval, pretty, fullscreen, memclip, skip_engines = (
+        args.metrics,
+        args.interval,
+        not args.raw,
+        args.fullscreen,
+        args.memclip,
+        args.skip,
+    )
+
+    chart_cnt = len(metrics)
+    fig, graph_ax = plt.subplots(chart_cnt, 1, figsize=(10, 10), sharex=True)
+
+    if chart_cnt == 1:
+        graph_ax = [graph_ax]
+
+    runs, program, dataset, workers = None, None, None, None
+
+    if pretty:
+        runs, program, dataset, workers = pretty_parse(log_files)
+    else:
+        colors = ["b", "g", "r", "c", "m", "y", "k", "orange", "purple", "brown"]
+        runs = [(file.name, color, file, None) for file, color in zip(log_files, colors)]
+
+    graph_lines = [[] for _ in range(chart_cnt)]
+    priority = len(log_files)
+
+    for label, clr, file, engine_key in runs:
+        if pretty and skip_engines is not None and engine_key in skip_engines:
+            continue
+        
+        data = pd.read_csv(file)
 
         # Cleanup data
         if interval is not None and interval > 0:
-            data['Time'] = (data['Time'] // interval) * interval
-            df_resampled = data.groupby('Time', as_index=False).median()
+            data["Time"] = (data["Time"] // interval) * interval
+            df_resampled = data.groupby("Time", as_index=False).median()
             data = df_resampled
+
+        data["MEM Usage"] = data["MEM Usage"].div(1024.0 * 1024.0 * 1024.0)
+
+        if pretty:
+            data["CPU Percent"] = (
+                data["CPU Percent"].div(workers).clip(lower=0, upper=100)
+            )
+
+        if memclip is not None:
+            data["MEM Usage"] = data["MEM Usage"].clip(lower=0, upper=memclip)
 
         i = 0
 
@@ -145,36 +234,53 @@ def plot_run(run_names, metrics, interval):
                 (line,) = ax.plot(
                     data["Time"],
                     data["CPU Percent"],
-                    label=run,
+                    label=label,
                     linestyle="-",
                     color=clr,
+                    zorder=priority,
                 )
             elif g == "m":
                 (line,) = ax.plot(
                     data["Time"],
-                    data["MEM Usage"] / 1000.0 / 1000.0,
-                    label=run,
+                    data["MEM Usage"],
+                    label=label,
                     linestyle="-",
                     color=clr,
+                    zorder=priority,
                 )
             elif g == "r":
                 (line,) = ax.plot(
-                    data["Time"], data["IO Reads"] / 1000.0, label=run, color=clr
+                    data["Time"],
+                    data["IO Reads"] / 1024.0 / 1024.0,
+                    label=label,
+                    color=clr,
+                    zorder=priority,
                 )
 
             graph_lines[i].append(line)
             i += 1
 
+        priority -= 1
+
     for g, ax in zip(metrics, graph_ax):
         if g == "c":
-            ax.set_title("Cumulative CPU Usage")
-            ax.set_ylabel("Percent")
+            if pretty:
+                ax.set_title(
+                    f"CPU Utilization for {program} ({dataset}) with {workers} threads"
+                )
+            ax.set_ylabel("CPU Usage (Percent)")
         elif g == "m":
-            ax.set_title("Memory Usage")
-            ax.set_ylabel("MB")
+            if pretty:
+                ax.set_title(
+                    f"Memory Utilization for {program} ({dataset}) with {workers} threads"
+                )
+            ax.set_ylabel("Memory Usage (GiB)")
         elif g == "r":
-            ax.set_title("Disk Reads")
-            ax.set_ylabel("KB")
+            if pretty:
+                ax.set_title(
+                    f"Disk Reads for {program} ({dataset}) with {workers} threads"
+                )
+            ax.set_ylabel("Disk Reads (MiB)")
 
     graph_ax[-1].set_xlabel("Time (s)")
     legends = [ax.legend() for ax in graph_ax]
@@ -205,18 +311,21 @@ def plot_run(run_names, metrics, interval):
     for ax in graph_ax:
         ax.grid()
 
-    # plot_name = run_names[0]
-
-    # if len(run_names) > 1:
-    #     plot_name = run_names[0] + "-cmp"
-
-    fig.canvas.manager.set_window_title("DlBench")
+    if pretty:
+        fig.canvas.manager.set_window_title(
+            f"{program} {dataset} {workers} ({metrics})"
+        )
+    else:
+        fig.canvas.manager.set_window_title("DlBench")
 
     manager = plt.get_current_fig_manager()
-    manager.full_screen_toggle()
+
+    if fullscreen:
+        manager.full_screen_toggle()
+    else:
+        manager.window.showMaximized()
 
     plt.tight_layout()
-    # plt.savefig(plot_name, dpi=300)
     plt.show()
 
 

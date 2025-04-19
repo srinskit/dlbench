@@ -32,7 +32,30 @@ def main():
 
     mode_plot_args = subparsers.add_parser("plot", help="Plot logs from past runs")
 
-    mode_plot_args.add_argument("--interval", type=float, help="The resolution of the time axis in seconds")
+    mode_plot_args.add_argument(
+        "--interval",
+        type=float,
+        help="The resolution of the time axis in seconds",
+    )
+    mode_plot_args.add_argument(
+        "--memclip",
+        metavar="Memory Limit (GiB)",
+        type=float,
+        help="The maximum memory utilization to be shown",
+    )
+    mode_plot_args.add_argument(
+        "--raw", action="store_true", help="Do not enhance label and plot order"
+    )
+    mode_plot_args.add_argument(
+        "--fullscreen", action="store_true", help="Show plot in fullscreen window"
+    )
+
+    mode_plot_args.add_argument(
+        "--skip",
+        metavar="acronym",
+        type=str,
+        help="Engines to skip (f: Flowlog, s: Souffle (compiled), i: Souffle (interpreted), r: RecStep, d: DDLog)",
+    )
 
     mode_plot_args.add_argument(
         "--metrics",
@@ -100,11 +123,10 @@ def main():
             if runs is None:
                 print("Error: could not find logs")
             else:
-                runs = [run[2:-4] for run in runs]
                 print("Run names:", runs)
-                bench.plot_run(runs, args.metrics, args.interval)
+                bench.plot_run(runs, args)
         else:
-            bench.plot_run([file.name[:-4] for file in args.logs], args.metrics, args.interval)
+            bench.plot_run(args.logs, args)
 
 
 if __name__ == "__main__":
