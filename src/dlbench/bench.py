@@ -122,12 +122,12 @@ def benchmark(run_name, sh, target_process, start_time, misc_targets):
 
 def pretty_parse(log_files):
     seq = [
-        ("Flowlog", "purple", "flowlog", "f"),
-        ("Flowlog", "purple", "eclair", "f"),
-        ("Souffle (compiled)", "darkblue", "souffle-cmpl", "s"),
-        ("Souffle (interpreted)", "lightblue", "souffle-intptr", "i"),
-        ("RecStep", "orange", "recstep", "r"),
-        ("DDlog", "darkred", "ddlog", "d"),
+        ("Flowlog", "Purple", "flowlog", "f"),
+        ("Flowlog", "Purple", "eclair", "f"),
+        ("Souffle (compiled)", "Navy", "souffle-cmpl", "s"),
+        ("Souffle (interpreted)", "Lightblue", "souffle-intptr", "i"),
+        ("RecStep", "DarkOrange", "recstep", "r"),
+        ("DDlog", "FireBrick", "ddlog", "d"),
     ]
 
     workers_set = set()
