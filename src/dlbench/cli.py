@@ -49,6 +49,10 @@ def main():
     mode_plot_args.add_argument(
         "--fullscreen", action="store_true", help="Show plot in fullscreen window"
     )
+    
+    mode_plot_args.add_argument(
+        "--nolegend", action="store_true", help="Do not show the legend"
+    )
 
     mode_plot_args.add_argument(
         "--skip",

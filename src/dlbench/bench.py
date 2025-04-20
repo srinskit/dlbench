@@ -179,13 +179,14 @@ def pretty_parse(log_files):
 
 
 def plot_run(log_files, args):
-    metrics, interval, pretty, fullscreen, memclip, skip_engines = (
+    metrics, interval, pretty, fullscreen, memclip, skip_engines, no_legend = (
         args.metrics,
         args.interval,
         not args.raw,
         args.fullscreen,
         args.memclip,
         args.skip,
+        args.nolegend,
     )
 
     chart_cnt = len(metrics)
@@ -200,7 +201,9 @@ def plot_run(log_files, args):
         runs, program, dataset, workers = pretty_parse(log_files)
     else:
         colors = ["b", "g", "r", "c", "m", "y", "k", "orange", "purple", "brown"]
-        runs = [(file.name, color, file, None) for file, color in zip(log_files, colors)]
+        runs = [
+            (file.name, color, file, None) for file, color in zip(log_files, colors)
+        ]
 
     graph_lines = [[] for _ in range(chart_cnt)]
     priority = len(log_files)
@@ -208,7 +211,7 @@ def plot_run(log_files, args):
     for label, clr, file, engine_key in runs:
         if pretty and skip_engines is not None and engine_key in skip_engines:
             continue
-        
+
         data = pd.read_csv(file)
 
         # Cleanup data
@@ -283,30 +286,32 @@ def plot_run(log_files, args):
             ax.set_ylabel("Disk Reads (MiB)")
 
     graph_ax[-1].set_xlabel("Time (s)")
-    legends = [ax.legend() for ax in graph_ax]
 
-    # Define function for toggling visibility
-    def on_legend_click(event):
-        for legend, lines in zip(legends, graph_lines):
-            for leg_line, leg_text, line in zip(
-                legend.get_lines(), legend.get_texts(), lines
-            ):
-                if event.artist == leg_text:
-                    visible = not line.get_visible()
-                    line.set_visible(visible)
-                    leg_line.set_alpha(1.0 if visible else 0.2)
-                    leg_text.set_alpha(1.0 if visible else 0.3)
-                    fig.canvas.draw()
-                    plt.draw()
-                    return
+    if not no_legend:
+        legends = [ax.legend() for ax in graph_ax]
 
-    # Connect event
-    fig.canvas.mpl_connect("pick_event", on_legend_click)
+        # Define function for toggling visibility
+        def on_legend_click(event):
+            for legend, lines in zip(legends, graph_lines):
+                for leg_line, leg_text, line in zip(
+                    legend.get_lines(), legend.get_texts(), lines
+                ):
+                    if event.artist == leg_text:
+                        visible = not line.get_visible()
+                        line.set_visible(visible)
+                        leg_line.set_alpha(1.0 if visible else 0.2)
+                        leg_text.set_alpha(1.0 if visible else 0.3)
+                        fig.canvas.draw()
+                        plt.draw()
+                        return
 
-    # Make legend elements clickable
-    for leg in legends:
-        for leg_text in leg.get_texts():
-            leg_text.set_picker(True)
+        # Connect event
+        fig.canvas.mpl_connect("pick_event", on_legend_click)
+
+        # Make legend elements clickable
+        for leg in legends:
+            for leg_text in leg.get_texts():
+                leg_text.set_picker(True)
 
     for ax in graph_ax:
         ax.grid()
