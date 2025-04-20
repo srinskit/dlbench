@@ -18,7 +18,7 @@ pip uninstall dlbench
 
 ## Usage
 
-### Benchmark a run
+### Benchmark a Run
 
 `dlbench run` takes as input a shell command `cmd` that would execute the benchmark target. It starts the benchmark target as a subprocess and monitors it's resource utilization. DLBench monitors the CPU utilization, memory utilization and disk reads of the benchmark target and any subprocess of the target. Additional `systemd` background processes can be monitored by specifiying their names in the `--monitor` argument. The reported utilization for any metric is the sum of utilizations of all the above processes.
 
@@ -44,31 +44,9 @@ options:
                         Names of additional systemd processes to monitor
 ```
 
-`dlbench plot` is used to plot resource utilization data from one or more `<tag>.log` files. If multiple log files are specified, their resource utilization is plotted on the same chart for comparison. 
+### Benchmark Examples
 
-Log files can be specified with the `--logs` argument. File names and patterns are accepted. Alternatively, `--last <n>` can be used to plot the `n` most recent log files in the current working directory.
-
-The `--metrics` argument can be used to specify what charts are plotted. For example, `--metrics c` plot only the CPU utilization and `--metrics cr` plots the CPU utilization and disk reads. The `--pretty` flag is used to remove outliers and smooth the plot.
-
-```sh
-dlbench plot --help
-
-usage: dlbench plot [-h] [--pretty] [--metrics acronym] (--logs file [file ...] | --last count)
-
-options:
-  -h, --help            show this help message and exit
-  --pretty              Process logs for a neater plot
-  --metrics acronym     Metrics to plot (c: CPU, m: memory, r: disk reads)
-  --logs file [file ...]
-                        Path to log files of runs
-  --last count          Plot recent runs
-```
-
-### Examples
-
-#### Sample
-
-Benchmark sample program with argument `5`:
+Benchmark the included sample program with argument `5`:
 ```sh
 dlbench run "./testproc.sh 5" test1
 ```
@@ -84,46 +62,6 @@ ls test1*
 
 test1.log  test1.out
 ```
-
-Plot the log file:
-
-```sh
-dlbench plot --logs test1.log
-```
-
-![sample plot](sample1.png)
-
-
-Benchmark sample program with argument `7`:
-
-```sh
-dlbench run "./testproc.sh 7" test2
-```
-
-Plot results of both runs:
-
-```sh
-dlbench plot --logs test1.log test2.log
-
-# or
-
-dlbench plot --logs test*.log
-
-# or
-
-dlbench plot --last 2
-```
-
-![sample plot](sample2.png)
-
-Plot only memory utilization:
-
-```sh
-dlbench plot --logs test*.log --metrics m
-```
-
-![sample plot](sample3.png)
-
 
 #### Souffle
 Souffle in interpreter mode
@@ -152,6 +90,97 @@ Supply inputs to the benchmark target process using input redirections.
 dlbench run "./reach_ddlog/target/release/reach_cli -w 4 < ddlog-test/edge.facts" "ddlog"
 ```
 
+### Plot Runs
+
+`dlbench plot` is used to plot resource utilization data from one or more `<tag>.log` files. If multiple log files are specified, their resource utilization is plotted on the same chart for comparison. 
+
+Log files can be specified with the `--logs` argument. File names and patterns are accepted. Alternatively, `--last <n>` can be used to plot the `n` most recent log files in the current working directory.
+
+The `--metrics` argument can be used to specify what charts are plotted. For example, `--metrics c` plot only the CPU utilization and `--metrics cr` plots the CPU utilization and disk reads. The `--pretty` flag is used to remove outliers and smooth the plot.
+
+```sh
+dlbench plot --help
+
+usage: dlbench plot [-h] [--interval INTERVAL] [--memclip Memory Limit (GiB)] [--raw] [--fullscreen] [--skip acronym]
+                    [--metrics acronym] (--logs file [file ...] | --last count)
+
+options:
+  -h, --help            show this help message and exit
+  --interval INTERVAL   The resolution of the time axis in seconds
+  --memclip Memory Limit (GiB)
+                        The maximum memory utilization to be shown
+  --raw                 Do not enhance label and plot order
+  --fullscreen          Show plot in fullscreen window
+  --skip acronym        Engines to skip (f: Flowlog, s: Souffle (compiled), i: Souffle (interpreted), r: RecStep, d: DDLog)
+  --metrics acronym     Metrics to plot (c: CPU, m: memory, r: disk reads)
+  --logs file [file ...]
+                        Path to log files of runs
+  --last count          Plot recent runs
+```
+
+### Plot Examples
+
+#### Raw Plots
+
+Plot a log file:
+
+```sh
+dlbench plot --logs test1.log --raw
+```
+
+![sample plot](sample1.png)
+
+Plot results of last two runs `test1` and `test2`:
+
+```sh
+dlbench plot --logs test1.log test2.log --raw
+
+# or
+
+dlbench plot --logs test*.log --raw
+
+# or
+
+dlbench plot --last 2 --raw
+```
+
+![sample plot](sample2.png)
+
+#### Pretty Plot (default)
+
+By not specifying `--raw` in the argument list, the plot will be plotted in pretty mode. Note that pretty mode can be used only when plotting a single experiment, for example plotting logs of all engines but specifically for the CSPA program, linux dataset, and with 64 threads. Here are some suggested enhancements to go along with it:
+
+##### Metrics
+
+Plot only specified metrics. The below command plots only CPU utilization.
+
+```sh
+dlbench plot --logs results/Dyck*kernel*_64*.log --metrics c
+```
+
+##### Interval
+
+Sample resource utilizations within the supplied time-window, and plot the medians within the time-window.
+
+```sh
+dlbench plot --logs results/Dyck*kernel*_64*.log --metrics m --interval .2
+```
+
+##### Skip Engines
+
+Skip plotting certain engines. The below example does not plot DDlog and Souffle Interpreter despite including their log files.
+
+```sh
+dlbench plot --logs results/Dyck*kernel*_64*.log --metrics m --interval .2 --skip di
+```
+
+#### Fullscreen
+
+Show the plot in fullscreen. This is also useful if your plot is running into an exception in the regular-screen mode- fullscreen should be more robust across platforms.
+
+```sh
+dlbench plot --logs results/Dyck*kernel*_64*.log --metrics m --interval .2 --skip di --fullscreen
+```
 
 ### Understanding the plot
 
