@@ -150,6 +150,8 @@ dlbench plot --last 2 --raw
 
 By not specifying `--raw` in the argument list, the plot will be plotted in pretty mode. Note that pretty mode can be used only when plotting a single experiment, for example plotting logs of all engines but specifically for the CSPA program, linux dataset, and with 64 threads. Here are some suggested enhancements to go along with it:
 
+Pretty plots plot the CPU utilization in the range 0-100%. They also order the plots in the order: Flowlog, Souffle Compiled, Souffle Interpreter, RecStep, DDlog.
+
 ##### Interval
 
 Sample resource utilizations within the supplied time-window, and plot the medians within the time-window.
@@ -197,6 +199,6 @@ dlbench plot --logs results/Dyck*kernel*_64*.log --interval .2 --metrics m --ful
 
 In the above plot:
 
-* The first chart plots vs time the cumulative CPU utilization, i.e., sum of the instantaneous CPU utlization (percent) of all worker threads in the target process. Cumulative utilization was chosen to minimize cluter when comparing multiple runs.
+* The first chart plots vs time the cumulative CPU utilization, i.e., sum of the instantaneous CPU utlization (percent) of all worker threads in the target process. Cumulative utilization was chosen over thread-wise utilization or system utilization to minimize cluter and increase accuracy respectively.
 * The second chart plots vs time the instantaneous memory utilization of the process.
 * The final chart plots vs time the total disk reads by the process.
