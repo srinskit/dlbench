@@ -320,10 +320,7 @@ def plot_run(log_files, args):
 
     manager = plt.get_current_fig_manager()
 
-    if fullscreen:
-        manager.full_screen_toggle()
-    else:
-        manager.window.showMaximized()
+    manager.full_screen_toggle()
 
     plt.tight_layout()
     plt.show()
