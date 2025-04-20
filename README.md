@@ -150,28 +150,37 @@ dlbench plot --last 2 --raw
 
 By not specifying `--raw` in the argument list, the plot will be plotted in pretty mode. Note that pretty mode can be used only when plotting a single experiment, for example plotting logs of all engines but specifically for the CSPA program, linux dataset, and with 64 threads. Here are some suggested enhancements to go along with it:
 
-##### Metrics
-
-Plot only specified metrics. The below command plots only CPU utilization.
-
-```sh
-dlbench plot --logs results/Dyck*kernel*_64*.log --metrics c
-```
-
 ##### Interval
 
 Sample resource utilizations within the supplied time-window, and plot the medians within the time-window.
 
 ```sh
-dlbench plot --logs results/Dyck*kernel*_64*.log --metrics m --interval .2
+dlbench plot --logs results/Dyck*kernel*_64*.log --interval .2
 ```
+
+##### Metrics
+
+Plot only specified metrics. The below command plots only CPU utilization.
+
+```sh
+dlbench plot --logs results/Dyck*kernel*_64*.log --interval .2 --metrics c
+```
+
 
 ##### Skip Engines
 
 Skip plotting certain engines. The below example does not plot DDlog and Souffle Interpreter despite including their log files.
 
 ```sh
-dlbench plot --logs results/Dyck*kernel*_64*.log --metrics m --interval .2 --skip di
+dlbench plot --logs results/Dyck*kernel*_64*.log --interval .2 --metrics c --skip di
+```
+
+#### Limit Memory
+
+Place an upperbound on the memory utilization plotted.
+
+```sh
+dlbench plot --logs results/Dyck*kernel*_64*.log --interval .2 --metrics m --memclip 256
 ```
 
 #### Fullscreen
@@ -179,7 +188,7 @@ dlbench plot --logs results/Dyck*kernel*_64*.log --metrics m --interval .2 --ski
 Show the plot in fullscreen. This is also useful if your plot is running into an exception in the regular-screen mode- fullscreen should be more robust across platforms.
 
 ```sh
-dlbench plot --logs results/Dyck*kernel*_64*.log --metrics m --interval .2 --skip di --fullscreen
+dlbench plot --logs results/Dyck*kernel*_64*.log --interval .2 --metrics m --fullscreen
 ```
 
 ### Understanding the plot
