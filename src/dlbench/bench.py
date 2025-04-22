@@ -124,8 +124,8 @@ def pretty_parse(log_files):
     seq = [
         ("Flowlog", "Purple", "flowlog", "f", "-"),
         ("Flowlog", "Purple", "eclair", "f", "-"),
-        ("Souffle (compiled)", "Navy", "souffle-cmpl", "s", "--"),
-        ("Souffle (interpreted)", "Lightblue", "souffle-intptr", "i", "--"),
+        ("Souffle (comp.)", "Navy", "souffle-cmpl", "s", "--"),
+        ("Souffle (interp.)", "Lightblue", "souffle-intptr", "i", "--"),
         ("RecStep", "DarkOrange", "recstep", "r", ":"),
         ("DDlog", "FireBrick", "ddlog", "d", "-."),
     ]
@@ -178,13 +178,14 @@ def pretty_parse(log_files):
     return result, program, dataset, int(workers)
 
 
-def plot_run(log_files, args):
+def plot_run(files, args):
     (
         metrics,
-        interval,
+        intervals,
         pretty,
         fullscreen,
-        memclip,
+        memclips,
+        timeclips,
         skip_engines,
         no_legend,
         font_sizes,
@@ -194,95 +195,163 @@ def plot_run(log_files, args):
         not args.raw,
         args.fullscreen,
         args.memclip,
+        args.timeclip,
         args.skip,
         args.nolegend,
         args.fontsizes,
     )
 
-    font_label, font_tick, font_legend = [int(size.strip()) for size in font_sizes.split(",")]
+    run_organizer = {}
 
+    for file in files:
+        features = re.split(r"[/_.]", file.name)
+
+        if features[-1] == "log":
+            bucket = "_".join(features[-5:-2])
+
+            if bucket in run_organizer:
+                run_organizer[bucket].append(file)
+            else:
+                run_organizer[bucket] = [file]
+
+    font_label, font_tick, font_legend = font_sizes
+
+    run_cnt = len(run_organizer)
     chart_cnt = len(metrics)
-    fig, graph_ax = plt.subplots(chart_cnt, 1, figsize=(10, 10), sharex=True)
+    fig, run_graphs = plt.subplots(chart_cnt, run_cnt, figsize=(10, 10))
 
     if chart_cnt == 1:
-        graph_ax = [graph_ax]
+        run_graphs = [run_graphs]
 
-    runs, program, dataset, workers = None, None, None, None
+    if run_cnt == 1:
+        run_graphs = [[ax] for ax in run_graphs]
 
-    if pretty:
-        runs, program, dataset, workers = pretty_parse(log_files)
-    else:
-        colors = ["b", "g", "r", "c", "m", "y", "k", "orange", "purple", "brown"]
-        runs = [
-            (file.name, color, file, None, "-")
-            for file, color in zip(log_files, colors)
-        ]
+    # Transpose to one run's chart per row
+    run_graphs = [[run_graphs[j][i] for j in range(chart_cnt)] for i in range(run_cnt)]
 
-    graph_lines = [[] for _ in range(chart_cnt)]
-    priority = len(log_files)
+    run_id = -1
 
-    for label, clr, file, engine_key, line_type in runs:
-        if pretty and skip_engines is not None and engine_key in skip_engines:
-            continue
-
-        data = pd.read_csv(file)
-
-        # Cleanup data
-        if interval is not None and interval > 0:
-            data["Time"] = (data["Time"] // interval) * interval
-            df_resampled = data.groupby("Time", as_index=False).median()
-            data = df_resampled
-
-        data["MEM Usage"] = data["MEM Usage"].div(1024.0 * 1024.0 * 1024.0)
+    for group, graph_ax in zip(run_organizer, run_graphs):
+        run_id += 1
+        log_files = run_organizer[group]
+        runs, program, dataset, workers = None, None, None, None
 
         if pretty:
-            data["CPU Percent"] = (
-                data["CPU Percent"].div(workers).clip(lower=0, upper=100)
-            )
+            runs, program, dataset, workers = pretty_parse(log_files)
+        else:
+            colors = ["b", "g", "r", "c", "m", "y", "k", "orange", "purple", "brown"]
+            runs = [
+                (file.name, color, file, None, "-")
+                for file, color in zip(log_files, colors)
+            ]
 
-        if memclip is not None:
-            data["MEM Usage"] = data["MEM Usage"].clip(lower=0, upper=memclip)
+        graph_lines = [[] for _ in range(chart_cnt)]
+        priority = len(log_files)
 
-        i = 0
+        for label, clr, file, engine_key, line_type in runs:
+            if pretty and skip_engines is not None and engine_key in skip_engines:
+                continue
 
-        for g, ax in zip(metrics, graph_ax):
-            if g == "c":
-                (line,) = ax.plot(
-                    data["Time"],
-                    data["CPU Percent"],
-                    label=label,
-                    linestyle=line_type,
-                    color=clr,
-                    zorder=priority,
-                    linewidth=2,
+            data = pd.read_csv(file)
+
+            # Cleanup data
+            interval = -1
+
+            if intervals is not None:
+                if len(intervals) == 1:
+                    interval = intervals[0]
+                elif len(intervals) == run_cnt:
+                    interval = intervals[run_id]
+                else:
+                    print("[error] specify interval for all graphs, once, or never.")
+                    exit(1)
+
+            if interval is not None and interval > 0:
+                data["Time"] = (data["Time"] // interval) * interval
+                df_resampled = data.groupby("Time", as_index=False).median()
+                data = df_resampled
+
+            timeclip = -1
+
+            if timeclips is not None:
+                if len(timeclips) == 1:
+                    timeclip = timeclips[0]
+                elif len(timeclips) == run_cnt:
+                    timeclip = timeclips[run_id]
+                else:
+                    print("[error] specify timeclip for all graphs, once, or never.")
+                    exit(1)
+
+            if timeclip > 0:
+                data = data[data["Time"] <= timeclip].copy()
+
+            data["MEM Usage"] = data["MEM Usage"].div(1024.0 * 1024.0 * 1024.0)
+
+            if pretty:
+                data["CPU Percent"] = (
+                    data["CPU Percent"].div(workers).clip(lower=0, upper=100)
                 )
-            elif g == "m":
-                (line,) = ax.plot(
-                    data["Time"],
-                    data["MEM Usage"],
-                    label=label,
-                    linestyle=line_type,
-                    color=clr,
-                    zorder=priority,
-                    linewidth=2,
-                )
-            elif g == "r":
-                (line,) = ax.plot(
-                    data["Time"],
-                    data["IO Reads"] / 1024.0 / 1024.0,
-                    label=label,
-                    linestyle=line_type,
-                    color=clr,
-                    zorder=priority,
-                    linewidth=2,
-                )
 
-            graph_lines[i].append(line)
-            i += 1
+            memclip = -1
 
-        priority -= 1
+            if memclips is not None:
+                if len(memclips) == 1:
+                    memclip = memclips[0]
+                elif len(memclips) == run_cnt:
+                    memclip = memclips[run_id]
+                else:
+                    print("[error] specify memclip for all graphs, once, or never.")
+                    exit(1)
 
-    for g, ax in zip(metrics, graph_ax):
+            if memclip > 0:
+                data["MEM Usage"] = data["MEM Usage"].clip(lower=0, upper=memclip)
+
+            i = 0
+
+            for g, ax in zip(metrics, graph_ax):
+                if g == "c":
+                    (line,) = ax.plot(
+                        data["Time"],
+                        data["CPU Percent"],
+                        label=label,
+                        linestyle=line_type,
+                        color=clr,
+                        zorder=priority,
+                        linewidth=3,
+                    )
+                elif g == "m":
+                    (line,) = ax.plot(
+                        data["Time"],
+                        data["MEM Usage"],
+                        label=label,
+                        linestyle=line_type,
+                        color=clr,
+                        zorder=priority,
+                        linewidth=3,
+                    )
+                elif g == "r":
+                    (line,) = ax.plot(
+                        data["Time"],
+                        data["IO Reads"] / 1024.0 / 1024.0,
+                        label=label,
+                        linestyle=line_type,
+                        color=clr,
+                        zorder=priority,
+                        linewidth=3,
+                    )
+
+                graph_lines[i].append(line)
+                i += 1
+
+            priority -= 1
+
+        graph_ax[-1].set_xlabel("Time (s)", fontsize=font_label, labelpad=10)
+
+        for ax in graph_ax:
+            ax.tick_params(axis="both", labelsize=font_tick)
+            ax.grid()
+
+    for g, ax in zip(metrics, run_graphs[0]):
         if g == "c":
             if not pretty:
                 ax.set_title(
@@ -302,39 +371,27 @@ def plot_run(log_files, args):
                 )
             ax.set_ylabel("Disk Reads (MiB)", fontsize=font_label, labelpad=10)
 
-    graph_ax[-1].set_xlabel("Time (s)", fontsize=font_label, labelpad=10)
-
     if not no_legend:
-        legends = [ax.legend(fontsize=font_legend) for ax in graph_ax]
+        ax = run_graphs[0][0]
+        handles, labels = ax.get_legend_handles_labels()
+        ax = run_graphs[-1][-1]
+        ax.legend(handles=handles, labels=labels, fontsize=font_legend)
 
-        # Define function for toggling visibility
-        def on_legend_click(event):
-            for legend, lines in zip(legends, graph_lines):
-                for leg_line, leg_text, line in zip(
-                    legend.get_lines(), legend.get_texts(), lines
-                ):
-                    if event.artist == leg_text:
-                        visible = not line.get_visible()
-                        line.set_visible(visible)
-                        leg_line.set_alpha(1.0 if visible else 0.2)
-                        leg_text.set_alpha(1.0 if visible else 0.3)
-                        fig.canvas.draw()
-                        plt.draw()
-                        return
+        # handles, labels = ax.get_legend_handles_labels()
+        # fig.legend(
+        #     handles,
+        #     labels,
+        #     fontsize=font_legend,
+        #     loc="lower center",
+        #     ncol=5,
+        #     bbox_to_anchor=(0.5, 0.01),
+        # )
 
-        # Connect event
-        fig.canvas.mpl_connect("pick_event", on_legend_click)
+        #     fig.tight_layout(rect=[0, 0.1, 1, 1], pad=0.5)
+        # else:
+        plt.tight_layout()
 
-        # Make legend elements clickable
-        for leg in legends:
-            for leg_text in leg.get_texts():
-                leg_text.set_picker(True)
-
-    for ax in graph_ax:
-        ax.tick_params(axis="both", labelsize=font_tick)
-        ax.grid()
-
-    if pretty:
+    if pretty and run_cnt == 1:
         fig.canvas.manager.set_window_title(
             f"{program} {dataset} {workers} ({metrics})"
         )
@@ -342,10 +399,8 @@ def plot_run(log_files, args):
         fig.canvas.manager.set_window_title("DlBench")
 
     manager = plt.get_current_fig_manager()
-
     manager.full_screen_toggle()
 
-    plt.tight_layout()
     plt.show()
 
 

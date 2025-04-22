@@ -34,22 +34,35 @@ def main():
 
     mode_plot_args.add_argument(
         "--interval",
+        metavar="window (s)",
         type=float,
-        help="The resolution of the time axis in seconds",
+        nargs="*",
+        help="The sampling resolution of the time axis",
     )
+
     mode_plot_args.add_argument(
         "--memclip",
         metavar="Memory Limit (GiB)",
         type=float,
-        help="The maximum memory utilization to be shown",
+        nargs="*",
+        help="The limit of memory utilization",
     )
+
+    mode_plot_args.add_argument(
+        "--timeclip",
+        metavar="Time Limit (s)",
+        type=float,
+        nargs="*",
+        help="The limit of the timeline",
+    )
+
     mode_plot_args.add_argument(
         "--raw", action="store_true", help="Do not enhance label and plot order"
     )
     mode_plot_args.add_argument(
         "--fullscreen", action="store_true", help="Show plot in fullscreen window"
     )
-    
+
     mode_plot_args.add_argument(
         "--nolegend", action="store_true", help="Do not show the legend"
     )
@@ -68,13 +81,14 @@ def main():
         default="cm",
         help="Metrics to plot (c: CPU, m: memory, r: disk reads)",
     )
-    
+
     mode_plot_args.add_argument(
         "--fontsizes",
         metavar="sizes",
-        type=str,
-        default="16,14,14",
-        help="Comma-separated font sizes for the label, ticks, and legend",
+        type=int,
+        default=[16, 14, 14],
+        nargs=3,
+        help="Font sizes for the label, ticks, and legend",
     )
 
     group = mode_plot_args.add_mutually_exclusive_group(required=True)
