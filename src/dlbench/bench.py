@@ -122,12 +122,12 @@ def benchmark(run_name, sh, target_process, start_time, misc_targets):
 
 def pretty_parse(log_files):
     seq = [
-        ("Flowlog", "Purple", "flowlog", "f"),
-        ("Flowlog", "Purple", "eclair", "f"),
-        ("Souffle (compiled)", "Navy", "souffle-cmpl", "s"),
-        ("Souffle (interpreted)", "Lightblue", "souffle-intptr", "i"),
-        ("RecStep", "DarkOrange", "recstep", "r"),
-        ("DDlog", "FireBrick", "ddlog", "d"),
+        ("Flowlog", "Purple", "flowlog", "f", "-"),
+        ("Flowlog", "Purple", "eclair", "f", "-"),
+        ("Souffle (compiled)", "Navy", "souffle-cmpl", "s", "--"),
+        ("Souffle (interpreted)", "Lightblue", "souffle-intptr", "i", "--"),
+        ("RecStep", "DarkOrange", "recstep", "r", ":"),
+        ("DDlog", "FireBrick", "ddlog", "d", "-."),
     ]
 
     workers_set = set()
@@ -171,15 +171,24 @@ def pretty_parse(log_files):
 
     result = []
 
-    for label, color, engine, engine_key in seq:
+    for label, color, engine, engine_key, line_type in seq:
         if engine in log_map:
-            result.append((label, color, log_map[engine], engine_key))
+            result.append((label, color, log_map[engine], engine_key, line_type))
 
     return result, program, dataset, int(workers)
 
 
 def plot_run(log_files, args):
-    metrics, interval, pretty, fullscreen, memclip, skip_engines, no_legend = (
+    (
+        metrics,
+        interval,
+        pretty,
+        fullscreen,
+        memclip,
+        skip_engines,
+        no_legend,
+        font_sizes,
+    ) = (
         args.metrics,
         args.interval,
         not args.raw,
@@ -187,7 +196,10 @@ def plot_run(log_files, args):
         args.memclip,
         args.skip,
         args.nolegend,
+        args.fontsizes,
     )
+
+    font_label, font_tick, font_legend = [int(size.strip()) for size in font_sizes.split(",")]
 
     chart_cnt = len(metrics)
     fig, graph_ax = plt.subplots(chart_cnt, 1, figsize=(10, 10), sharex=True)
@@ -202,13 +214,14 @@ def plot_run(log_files, args):
     else:
         colors = ["b", "g", "r", "c", "m", "y", "k", "orange", "purple", "brown"]
         runs = [
-            (file.name, color, file, None) for file, color in zip(log_files, colors)
+            (file.name, color, file, None, "-")
+            for file, color in zip(log_files, colors)
         ]
 
     graph_lines = [[] for _ in range(chart_cnt)]
     priority = len(log_files)
 
-    for label, clr, file, engine_key in runs:
+    for label, clr, file, engine_key, line_type in runs:
         if pretty and skip_engines is not None and engine_key in skip_engines:
             continue
 
@@ -238,26 +251,30 @@ def plot_run(log_files, args):
                     data["Time"],
                     data["CPU Percent"],
                     label=label,
-                    linestyle="-",
+                    linestyle=line_type,
                     color=clr,
                     zorder=priority,
+                    linewidth=2,
                 )
             elif g == "m":
                 (line,) = ax.plot(
                     data["Time"],
                     data["MEM Usage"],
                     label=label,
-                    linestyle="-",
+                    linestyle=line_type,
                     color=clr,
                     zorder=priority,
+                    linewidth=2,
                 )
             elif g == "r":
                 (line,) = ax.plot(
                     data["Time"],
                     data["IO Reads"] / 1024.0 / 1024.0,
                     label=label,
+                    linestyle=line_type,
                     color=clr,
                     zorder=priority,
+                    linewidth=2,
                 )
 
             graph_lines[i].append(line)
@@ -267,28 +284,28 @@ def plot_run(log_files, args):
 
     for g, ax in zip(metrics, graph_ax):
         if g == "c":
-            if pretty:
+            if not pretty:
                 ax.set_title(
                     f"CPU Utilization for {program} ({dataset}) with {workers} threads"
                 )
-            ax.set_ylabel("CPU Usage (Percent)")
+            ax.set_ylabel("CPU Usage (Percent)", fontsize=font_label, labelpad=10)
         elif g == "m":
-            if pretty:
+            if not pretty:
                 ax.set_title(
                     f"Memory Utilization for {program} ({dataset}) with {workers} threads"
                 )
-            ax.set_ylabel("Memory Usage (GiB)")
+            ax.set_ylabel("Memory Usage (GiB)", fontsize=font_label, labelpad=10)
         elif g == "r":
             if pretty:
                 ax.set_title(
                     f"Disk Reads for {program} ({dataset}) with {workers} threads"
                 )
-            ax.set_ylabel("Disk Reads (MiB)")
+            ax.set_ylabel("Disk Reads (MiB)", fontsize=font_label, labelpad=10)
 
-    graph_ax[-1].set_xlabel("Time (s)")
+    graph_ax[-1].set_xlabel("Time (s)", fontsize=font_label, labelpad=10)
 
     if not no_legend:
-        legends = [ax.legend() for ax in graph_ax]
+        legends = [ax.legend(fontsize=font_legend) for ax in graph_ax]
 
         # Define function for toggling visibility
         def on_legend_click(event):
@@ -314,6 +331,7 @@ def plot_run(log_files, args):
                 leg_text.set_picker(True)
 
     for ax in graph_ax:
+        ax.tick_params(axis="both", labelsize=font_tick)
         ax.grid()
 
     if pretty:

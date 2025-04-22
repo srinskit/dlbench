@@ -68,6 +68,14 @@ def main():
         default="cm",
         help="Metrics to plot (c: CPU, m: memory, r: disk reads)",
     )
+    
+    mode_plot_args.add_argument(
+        "--fontsizes",
+        metavar="sizes",
+        type=str,
+        default="16,14,14",
+        help="Comma-separated font sizes for the label, ticks, and legend",
+    )
 
     group = mode_plot_args.add_mutually_exclusive_group(required=True)
 
